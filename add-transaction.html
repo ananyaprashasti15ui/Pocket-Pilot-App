@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Transaction | PocketPilot</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script defer src="/static/app.js"></script>
+    <script defer src="/static/transactions.js"></script>
+    <style>
+        .cat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .cat-btn {
+            display: flex; flex-direction: column; align-items: center; gap: 6px;
+            padding: 14px 8px; border-radius: 16px; border: 2px solid var(--line);
+            background: rgba(255,255,255,0.7); cursor: pointer; font-weight: 700;
+            font-size: 0.78rem; color: var(--muted); transition: 160ms ease; font-family: inherit;
+        }
+        .cat-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
+        .cat-btn.selected { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); box-shadow: 0 6px 18px rgba(15,118,110,0.18); }
+        .cat-icon { font-size: 1.5rem; line-height: 1; }
+        .budget-bar-wrap { background: rgba(15,118,110,0.08); border-radius: 999px; height: 12px; overflow: hidden; margin: 10px 0; }
+        .budget-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #0f766e, #14b8a6); transition: width 0.4s ease; }
+        .budget-bar-fill.danger { background: linear-gradient(90deg, #c2410c, #f97316); }
+        .budget-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 0.88rem; flex-wrap: wrap; }
+        .days-badge { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 999px; font-weight: 800; font-size: 0.82rem; }
+        .days-badge.ok { background: rgba(21,128,61,0.1); color: var(--success); }
+        .days-badge.warn { background: rgba(194,65,12,0.1); color: var(--danger); }
+        .set-budget-row { display: flex; gap: 10px; margin-top: 14px; }
+        .set-budget-row input { flex: 1; }
+        @media (max-width: 720px) { .cat-grid { grid-template-columns: repeat(3, 1fr); } }
+
+        /* Action buttons in table */
+        .action-btn {
+            padding: 5px 10px; border: none; border-radius: 8px; cursor: pointer;
+            font-size: 0.82rem; font-weight: 700; transition: 120ms ease; font-family: inherit;
+        }
+        .edit-btn { background: rgba(15,118,110,0.12); color: var(--primary); margin-right: 6px; }
+        .edit-btn:hover { background: rgba(15,118,110,0.24); }
+        .delete-btn { background: rgba(194,65,12,0.1); color: var(--danger); }
+        .delete-btn:hover { background: rgba(194,65,12,0.2); }
+
+        /* Edit Modal */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; z-index: 1000;
+            background: rgba(18,26,32,0.55); backdrop-filter: blur(6px);
+            align-items: center; justify-content: center; padding: 20px;
+        }
+        .modal-box {
+            background: var(--surface-strong); border-radius: var(--radius-xl);
+            box-shadow: 0 40px 80px rgba(18,26,32,0.3); padding: 28px;
+            width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto;
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-header h3 { margin: 0; font-family: 'Space Grotesk', sans-serif; }
+        .modal-close { background: none; border: none; font-size: 1.4rem; cursor: pointer; line-height: 1; color: var(--muted); }
+        .modal-close:hover { color: var(--danger); }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-mark">PP</div>
+                <div class="brand-copy">
+                    <h1>PocketPilot</h1>
+                    <p>Smart finance manager for students</p>
+                </div>
+            </div>
+            <nav class="nav-group">
+                <a class="nav-link" data-nav href="/">Dashboard</a>
+                <a class="nav-link" data-nav href="/add-transaction">Add Transaction</a>
+                <a class="nav-link" data-nav href="/goals">Savings Goals</a>
+                <a class="nav-link" data-nav href="/analytics">Analytics</a>
+            </nav>
+            <div class="sidebar-card">
+                <h3>Quick tip</h3>
+                <p>Pick a category, enter the shop name and amount — done in 5 seconds. Edit or delete any transaction from the table below.</p>
+            </div>
+            <div id="sidebarUser"></div>
+        </aside>
+
+        <main class="main">
+            <div class="topbar">
+                <div>
+                    <h2>Add a transaction</h2>
+                    <p>Enter amount, shop name, and pick a category.</p>
+                </div>
+            </div>
+
+            <!-- Monthly Budget widget -->
+            <section class="card" style="margin-bottom:20px;">
+                <div class="panel-header">
+                    <h3 id="budgetMonthLabel">Monthly Budget</h3>
+                    <span class="days-badge ok" id="daysBadge">— days left</span>
+                </div>
+                <div class="budget-row">
+                    <span class="muted">Spent: <strong id="budgetSpent">₹0</strong></span>
+                    <span class="muted">Limit: <strong id="budgetTotal">not set</strong></span>
+                    <span>Remaining: <strong id="budgetRemaining">—</strong></span>
+                </div>
+                <div class="budget-bar-wrap">
+                    <div class="budget-bar-fill" id="budgetBarFill" style="width:0%"></div>
+                </div>
+                <div class="set-budget-row">
+                    <input type="number" id="budgetInput" min="1" step="100" placeholder="Set monthly limit e.g. 15000">
+                    <button class="btn primary" id="setBudgetBtn" onclick="saveBudget()">Set budget</button>
+                </div>
+            </section>
+
+            <section class="split-layout">
+                <!-- Transaction form -->
+                <article class="card">
+                    <div class="panel-header"><h3>New transaction</h3></div>
+                    <form id="transactionForm">
+                        <div class="form-grid">
+                            <div class="field">
+                                <label for="amountInput">Amount (₹)</label>
+                                <input type="number" id="amountInput" min="1" step="1" placeholder="250" required>
+                            </div>
+                            <div class="field">
+                                <label for="merchantInput">Shop / Place</label>
+                                <input type="text" id="merchantInput" placeholder="Burger King, Amazon, Gym…" required maxlength="80">
+                            </div>
+                            <div class="field full">
+                                <label for="dateInput">Date</label>
+                                <input type="date" id="dateInput">
+                            </div>
+                        </div>
+
+                        <div style="margin-top:20px;">
+                            <label style="display:block; margin-bottom:12px;">Category <span id="catError" style="color:var(--danger);font-weight:400;font-size:0.85rem;"></span></label>
+                            <div class="cat-grid" id="categoryGrid"></div>
+                            <input type="hidden" id="selectedCategory" required>
+                        </div>
+
+                        <div class="btn-row" style="margin-top:20px;">
+                            <button type="submit" class="btn primary">Save transaction</button>
+                        </div>
+                        <div id="formMessage" class="alerts" style="margin-top:14px;"></div>
+                    </form>
+                </article>
+
+                <!-- This month summary -->
+                <article class="card">
+                    <div class="panel-header"><h3>This month</h3></div>
+                    <div class="kpi-grid" style="margin-bottom:18px;">
+                        <div class="kpi-box">
+                            <div class="metric-label">Transactions</div>
+                            <div class="metric-value" id="monthCount">0</div>
+                        </div>
+                        <div class="kpi-box">
+                            <div class="metric-label">Expenses</div>
+                            <div class="metric-value" id="monthExpenses">₹0</div>
+                        </div>
+                        <div class="kpi-box">
+                            <div class="metric-label">Top category</div>
+                            <div class="metric-value" id="monthTopCat" style="font-size:1rem">—</div>
+                        </div>
+                    </div>
+                    <div class="panel-header"><h4>Recent</h4></div>
+                    <div id="recentList" class="list"></div>
+                </article>
+            </section>
+
+            <!-- Full history -->
+            <section class="card" style="margin-top:20px;">
+                <div class="panel-header"><h3>All transactions</h3></div>
+                <div id="transactionTableWrap"></div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Edit Transaction Modal -->
+    <div id="editModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>✏️ Edit Transaction</h3>
+                <button class="modal-close" onclick="closeEditModal()">✕</button>
+            </div>
+            <div class="form-grid">
+                <div class="field">
+                    <label for="editAmount">Amount (₹)</label>
+                    <input type="number" id="editAmount" min="1" step="1">
+                </div>
+                <div class="field">
+                    <label for="editMerchant">Shop / Place</label>
+                    <input type="text" id="editMerchant" maxlength="80">
+                </div>
+                <div class="field full">
+                    <label for="editDate">Date</label>
+                    <input type="date" id="editDate">
+                </div>
+            </div>
+            <div style="margin-top:16px;">
+                <label style="display:block;margin-bottom:10px;">Category</label>
+                <div class="cat-grid" id="editCategoryGrid"></div>
+                <input type="hidden" id="editSelectedCategory">
+            </div>
+            <div class="btn-row" style="margin-top:20px;">
+                <button class="btn primary" onclick="saveEditTransaction()">Save changes</button>
+                <button class="btn secondary" onclick="closeEditModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

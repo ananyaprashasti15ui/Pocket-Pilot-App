@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PocketPilot Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script defer src="/static/app.js"></script>
+    <script defer src="/static/dashboard.js"></script>
+    <style>
+        #quickTipText {
+            transition: opacity 150ms ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-mark">PP</div>
+                <div class="brand-copy">
+                    <h1>PocketPilot</h1>
+                    <p>Smart finance manager for students</p>
+                </div>
+            </div>
+            <nav class="nav-group">
+                <a class="nav-link" data-nav href="/">Dashboard</a>
+                <a class="nav-link" data-nav href="/add-transaction">Add Transaction</a>
+                <a class="nav-link" data-nav href="/goals">Savings Goals</a>
+                <a class="nav-link" data-nav href="/analytics">Analytics</a>
+            </nav>
+            <div class="sidebar-card">
+                <h3>Daily autopilot</h3>
+                <p>Paste payment messages, let PocketPilot classify them, and keep your student budget under control.</p>
+            </div>
+            <div id="sidebarUser"></div>
+        </aside>
+        <main class="main">
+            <div class="topbar">
+                <div>
+                    <h2>Your money, mapped clearly</h2>
+                    <p>Track spending, savings, investments, and risk signals from one dashboard.</p>
+                </div>
+                <div class="badge" id="predictionBadge">Loading forecast...</div>
+            </div>
+
+            <section class="card hero-card">
+                <div class="hero-copy">
+                    <h3>Stay ahead of overspending before your month slips.</h3>
+                    <p>PocketPilot turns raw bank or UPI messages into clean categories, predicts how long your balance lasts, and shows where your money is leaking.</p>
+                    <div class="btn-row">
+                        <a class="btn primary" href="/add-transaction">Add today’s transactions</a>
+                        <a class="btn secondary" href="/analytics">Open analytics</a>
+                    </div>
+                </div>
+                <div class="hero-orbit"></div>
+            </section>
+
+            <!-- Quick Tip - Motivational Message -->
+            <section class="card" id="quickTipCard" style="margin-top: 20px; background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(99,102,241,0.06)); border: 1px solid rgba(59,130,246,0.12);">
+                <div class="panel-header">
+                    <h3 style="font-size: 1.1rem;">💡 Quick Tip</h3>
+                    <a href="#" onclick="generateQuickTip(); return false;" style="font-size: 0.8rem; color: var(--primary); text-decoration: none; font-weight: 700;">Load new tip</a>
+                </div>
+                <p id="quickTipText" style="font-size: 1rem; line-height: 1.6; color: var(--text); margin: 0; font-weight: 500;">Loading motivational message...</p>
+            </section>
+
+            <section class="grid cards" style="margin-top: 20px;">
+                <article class="card">
+                    <div class="metric-label">Total expenses</div>
+                    <div class="metric-value" id="expensesMetric">₹0</div>
+                    <div class="metric-trend danger">Tracks all spending outflows</div>
+                </article>
+                <article class="card">
+                    <div class="metric-label">Total savings</div>
+                    <div class="metric-value" id="savingsMetric">₹0</div>
+                    <div class="metric-trend success">Income and deposits captured</div>
+                </article>
+                <article class="card">
+                    <div class="metric-label">Investments</div>
+                    <div class="metric-value" id="investmentsMetric">₹0</div>
+                    <div class="metric-trend success">SIPs, stocks, and funds</div>
+                </article>
+                <article class="card">
+                    <div class="metric-label">Remaining balance</div>
+                    <div class="metric-value" id="balanceMetric">₹0</div>
+                    <div class="metric-trend" id="balanceStatus">Net position after expenses and investments</div>
+                </article>
+            </section>
+
+            <!-- Monthly Budget Card -->
+            <section class="card" id="dashBudgetCard" style="margin-top:20px;">
+                <div class="panel-header">
+                    <h3 id="dashBudgetLabel">Monthly Budget</h3>
+                    <span id="dashDaysBadge" style="font-weight:800;font-size:0.85rem;color:var(--primary);">— days left</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:0.88rem;font-weight:700;margin-bottom:8px;">
+                    <span class="muted">Spent: <strong id="dashSpent">₹0</strong></span>
+                    <span class="muted">Limit: <strong id="dashBudgetTotal">not set</strong></span>
+                    <span>Remaining: <strong id="dashRemaining" style="color:var(--success)">—</strong></span>
+                </div>
+                <div style="background:rgba(15,118,110,0.08);border-radius:999px;height:12px;overflow:hidden;">
+                    <div id="dashBudgetBar" style="height:100%;border-radius:999px;background:linear-gradient(90deg,#0f766e,#14b8a6);transition:width .4s ease;width:0%"></div>
+                </div>
+                <a href="/add-transaction" class="muted" style="display:inline-block;margin-top:10px;font-size:0.85rem;font-weight:700;">Manage budget →</a>
+            </section>
+
+            <section class="panel-layout" style="margin-top: 20px;">
+                <article class="card">
+                    <div class="panel-header">
+                        <h3>Category distribution</h3>
+                        <span class="muted">All buckets</span>
+                    </div>
+                    <div class="chart-wrap">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                </article>
+                <article class="card">
+                    <div class="panel-header">
+                        <h3>Recent transactions</h3>
+                        <a href="/add-transaction" class="muted">Manage</a>
+                    </div>
+                    <div class="list" id="recentTransactions"></div>
+                </article>
+            </section>
+
+            <section class="split-layout" style="margin-top: 20px;">
+                <article class="card">
+                    <div class="panel-header">
+                        <h3>Risk warnings</h3>
+                    </div>
+                    <div class="alerts" id="warningsList"></div>
+                </article>
+                <article class="card">
+                    <div class="panel-header">
+                        <h3>Smart suggestions</h3>
+                    </div>
+                    <div class="alerts" id="suggestionsList"></div>
+                </article>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

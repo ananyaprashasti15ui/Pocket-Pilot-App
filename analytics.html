@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics | PocketPilot</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script defer src="/static/app.js"></script>
+    <script defer src="/static/analytics.js"></script>
+    <style>
+        .pie-3d-wrap { position: relative; min-height: 320px; perspective: 600px; }
+        .pie-3d-wrap canvas { transform: rotateX(14deg) scaleY(0.88); filter: drop-shadow(0 18px 24px rgba(15,118,110,0.28)); }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-mark">PP</div>
+                <div class="brand-copy">
+                    <h1>PocketPilot</h1>
+                    <p>Smart finance manager for students</p>
+                </div>
+            </div>
+            <nav class="nav-group">
+                <a class="nav-link" data-nav href="/">Dashboard</a>
+                <a class="nav-link" data-nav href="/add-transaction">Add Transaction</a>
+                <a class="nav-link" data-nav href="/goals">Savings Goals</a>
+                <a class="nav-link" data-nav href="/analytics">Analytics</a>
+            </nav>
+            <div class="sidebar-card">
+                <h3>Pattern detection</h3>
+                <p>Understand where your money goes, how fast it burns, and which spending clusters need attention.</p>
+            </div>
+            <div id="sidebarUser"></div>
+        </aside>
+        <main class="main">
+            <div class="topbar">
+                <div>
+                    <h2>Spending analytics and future risk</h2>
+                    <p>Use category breakdowns, pace analysis, and smart suggestions to adjust your money behavior.</p>
+                </div>
+                <div class="badge" id="averageSpendBadge">Loading analytics...</div>
+            </div>
+
+            <section class="grid cards">
+                <article class="card">
+                    <div class="metric-label">Average daily spending</div>
+                    <div class="metric-value" id="avgSpendMetric">₹0</div>
+                    <div class="metric-trend danger">Expense load per active day</div>
+                </article>
+                <article class="card">
+                    <div class="metric-label">💰 Money will last</div>
+                    <div class="metric-value" id="activeDaysMetric">—</div>
+                    <div class="metric-trend">Days until balance runs out</div>
+                </article>
+                <article class="card">
+                    <div class="metric-label">📅 Days left in month</div>
+                    <div class="metric-value" id="forecastMetric">-</div>
+                    <div class="metric-trend">Remaining days this month</div>
+                </article>
+                <article class="card">
+                    <div class="metric-label">Top expense category</div>
+                    <div class="metric-value" id="topCategoryMetric">-</div>
+                    <div class="metric-trend">Largest cost center</div>
+                </article>
+            </section>
+
+            <section class="panel-layout" style="margin-top: 20px;">
+                <article class="card">
+                    <div class="panel-header">
+                        <h3>Expense distribution</h3>
+                    </div>
+                    <div class="pie-3d-wrap">
+                        <canvas id="expenseChart"></canvas>
+                    </div>
+                </article>
+                <article class="card">
+                    <div class="panel-header">
+                        <h3>Latest analysis</h3>
+                    </div>
+                    <div class="alerts" id="analyticsWarnings"></div>
+                </article>
+            </section>
+
+            <section class="card" style="margin-top: 20px;">
+                <div class="panel-header">
+                    <h3>Transaction timeline</h3>
+                </div>
+                <div id="analyticsTableWrap"></div>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

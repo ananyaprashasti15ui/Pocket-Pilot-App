@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up – PocketPilot</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .auth-card {
+            width: 100%;
+            max-width: 420px;
+            padding: 40px;
+            border-radius: var(--radius-xl);
+            background: var(--surface-strong);
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(255,255,255,0.6);
+        }
+        .auth-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 32px; }
+        .auth-brand-mark {
+            width: 44px; height: 44px;
+            display: grid; place-items: center;
+            border-radius: 14px; color: white;
+            font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 0.9rem;
+            background: linear-gradient(135deg, #0f766e, #14b8a6);
+            box-shadow: 0 8px 20px rgba(15,118,110,0.28);
+        }
+        .auth-brand-name { font-family: 'Space Grotesk', sans-serif; font-size: 1.2rem; font-weight: 700; margin: 0; }
+        .auth-brand-sub { color: var(--muted); font-size: 0.85rem; margin: 2px 0 0; }
+        h2 { font-family: 'Space Grotesk', sans-serif; margin: 0 0 8px; font-size: 1.6rem; }
+        .auth-sub { color: var(--muted); margin: 0 0 28px; }
+        .field { display: grid; gap: 8px; margin-bottom: 16px; }
+        label { font-weight: 800; font-size: 0.9rem; }
+        .btn-full { width: 100%; padding: 14px; font-size: 1rem; margin-top: 8px; }
+        .auth-footer { text-align: center; margin-top: 20px; color: var(--muted); font-size: 0.9rem; }
+        .auth-footer a { color: var(--primary); font-weight: 700; }
+        .error-msg { display: none; padding: 12px 16px; border-radius: 14px; background: rgba(194,65,12,0.1); color: var(--danger); font-weight: 700; margin-bottom: 16px; font-size: 0.9rem; }
+        .error-msg.visible { display: block; }
+    </style>
+</head>
+<body>
+    <div class="auth-card">
+        <div class="auth-brand">
+            <div class="auth-brand-mark">PP</div>
+            <div>
+                <p class="auth-brand-name">PocketPilot</p>
+                <p class="auth-brand-sub">Smart finance for students</p>
+            </div>
+        </div>
+
+        <h2>Create your account</h2>
+        <p class="auth-sub">Start tracking your finances in seconds.</p>
+
+        <div class="error-msg" id="errorMsg"></div>
+
+        <form id="registerForm">
+            <div class="field">
+                <label for="name">Full name</label>
+                <input type="text" id="name" placeholder="Rahul Sharma" required autocomplete="name" minlength="2">
+            </div>
+            <div class="field">
+                <label for="email">Email</label>
+                <input type="email" id="email" placeholder="you@example.com" required autocomplete="email">
+            </div>
+            <div class="field">
+                <label for="password">Password <span style="font-weight:400;color:var(--muted)">(min 6 characters)</span></label>
+                <input type="password" id="password" placeholder="Create a password" required autocomplete="new-password" minlength="6">
+            </div>
+            <button type="submit" class="btn primary btn-full" id="submitBtn">Create account</button>
+        </form>
+
+        <p class="auth-footer">Already have an account? <a href="/login">Log in</a></p>
+    </div>
+
+    <script>
+        // Redirect if already logged in
+        if (localStorage.getItem('pp_token')) {
+            window.location.href = '/';
+        }
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const errorMsg = document.getElementById('errorMsg');
+            errorMsg.classList.remove('visible');
+            btn.textContent = 'Creating account…';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: document.getElementById('name').value,
+                        email: document.getElementById('email').value,
+                        password: document.getElementById('password').value,
+                    }),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Registration failed');
+                localStorage.setItem('pp_token', data.access_token);
+                localStorage.setItem('pp_user', JSON.stringify({ id: data.user_id, name: data.user_name, email: data.user_email }));
+                window.location.href = '/';
+            } catch (err) {
+                errorMsg.textContent = err.message;
+                errorMsg.classList.add('visible');
+                btn.textContent = 'Create account';
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

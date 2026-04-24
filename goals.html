@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Savings Goals | PocketPilot</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script defer src="/static/app.js"></script>
+    <script defer src="/static/goals.js"></script>
+    <style>
+        .deposit-section {
+            margin-top: 16px; padding-top: 16px;
+            border-top: 1px solid var(--line);
+        }
+        .deposit-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+        .deposit-row .field { flex: 1; min-width: 120px; }
+        .deposit-history { margin-top: 14px; display: grid; gap: 8px; }
+        .deposit-entry {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 14px; border-radius: 12px;
+            background: rgba(21,128,61,0.07); border: 1px solid rgba(21,128,61,0.14);
+        }
+        .deposit-entry .dep-amount { font-weight: 800; color: var(--success); }
+        .deposit-entry .dep-date { font-size: 0.82rem; color: var(--muted); font-weight: 700; }
+        .deposit-msg { font-size: 0.82rem; margin-top: 6px; min-height: 24px; }
+        .goal-delete-btn {
+            padding: 5px 12px; border: 1px solid rgba(194,65,12,0.2); border-radius: 8px;
+            background: rgba(194,65,12,0.07); color: var(--danger); cursor: pointer;
+            font-size: 0.8rem; font-weight: 700; transition: 120ms ease; font-family: inherit;
+        }
+        .goal-delete-btn:hover { background: rgba(194,65,12,0.18); }
+        .goal-edit-btn {
+            padding: 5px 12px; border: 1px solid rgba(37,99,235,0.2); border-radius: 8px;
+            background: rgba(37,99,235,0.07); color: var(--primary); cursor: pointer;
+            font-size: 0.8rem; font-weight: 700; transition: 120ms ease; font-family: inherit;
+        }
+        .goal-edit-btn:hover { background: rgba(37,99,235,0.18); }
+        .smart-plan-btn {
+            padding: 8px 14px; border: none; border-radius: 8px;
+            background: linear-gradient(135deg, rgba(37,99,235,0.15), rgba(59,130,246,0.1));
+            color: var(--primary); cursor: pointer;
+            font-size: 0.85rem; font-weight: 700; transition: 120ms ease; font-family: inherit;
+            margin-top: 12px; width: 100%;
+        }
+        .smart-plan-btn:hover { background: linear-gradient(135deg, rgba(37,99,235,0.25), rgba(59,130,246,0.2)); }
+        .smart-plan-card {
+            margin-top: 14px; padding: 14px; border-radius: 12px;
+            background: rgba(37,99,235,0.07); border: 1px solid rgba(37,99,235,0.14);
+        }
+        .smart-plan-card .plan-title { font-weight: 800; color: var(--primary); margin-bottom: 8px; }
+        .smart-plan-card .plan-details { font-size: 0.9rem; line-height: 1.6; color: var(--text); }
+        
+        /* Edit Modal */
+        .modal {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+            align-items: center; justify-content: center; z-index: 1000;
+        }
+        .modal-content {
+            background: white; border-radius: 16px; padding: 24px; max-width: 500px; width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        }
+        .modal-header {
+            font-size: 1.3rem; font-weight: 800; margin-bottom: 16px; color: var(--text-dark);
+        }
+        .modal-body {
+            display: grid; gap: 14px; margin-bottom: 16px;
+        }
+        .modal-footer {
+            display: flex; gap: 10px; justify-content: flex-end;
+        }
+        .modal-footer button { padding: 8px 16px; border-radius: 8px; border: none; font-weight: 700; cursor: pointer; }
+        .modal-footer .btn-cancel { background: var(--bg-secondary); color: var(--text); }
+        .modal-footer .btn-save { background: var(--primary); color: white; }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-mark">PP</div>
+                <div class="brand-copy">
+                    <h1>PocketPilot</h1>
+                    <p>Smart finance manager for students</p>
+                </div>
+            </div>
+            <nav class="nav-group">
+                <a class="nav-link" data-nav href="/">Dashboard</a>
+                <a class="nav-link" data-nav href="/add-transaction">Add Transaction</a>
+                <a class="nav-link" data-nav href="/goals">Savings Goals</a>
+                <a class="nav-link" data-nav href="/analytics">Analytics</a>
+            </nav>
+            <div class="sidebar-card">
+                <h3>Goal planning</h3>
+                <p>Set a target, add deposits anytime, and watch your savings grow towards your goal — tracked separately from your expenses.</p>
+            </div>
+            <div id="sidebarUser"></div>
+        </aside>
+        <main class="main">
+            <div class="topbar">
+                <div>
+                    <h2>Goal-based savings tracker</h2>
+                    <p>Create savings goals and add deposits anytime. Your savings are tracked independently from your expenses.</p>
+                </div>
+            </div>
+
+            <section class="split-layout">
+                <article class="card">
+                    <div class="panel-header">
+                        <h3>Create a new goal</h3>
+                    </div>
+                    <form id="goalForm" class="form-grid">
+                        <div class="field full">
+                            <label for="goalName">Goal name</label>
+                            <input id="goalName" placeholder="Laptop upgrade">
+                        </div>
+                        <div class="field full">
+                            <label for="targetAmount">Target amount (₹)</label>
+                            <input id="targetAmount" type="number" min="1" step="1" placeholder="50000">
+                        </div>
+                        <div class="field full">
+                            <label for="monthlySaving">Monthly saving amount (₹)</label>
+                            <input id="monthlySaving" type="number" min="0" step="1" placeholder="Optional - for smart suggestions" value="0">
+                        </div>
+                        <div class="field full btn-row">
+                            <button type="submit" class="btn primary">Create goal</button>
+                        </div>
+                    </form>
+                    <div id="goalMessage" class="alerts" style="margin-top: 18px;"></div>
+                </article>
+                <article class="card">
+                    <div class="panel-header">
+                        <h3>How progress is calculated</h3>
+                    </div>
+                    <div class="alerts">
+                        <div class="alert suggestion">Add deposits anytime — any amount, any day. Each deposit is recorded separately and shown in the goal card.</div>
+                        <div class="alert suggestion">Your saved amount = sum of all deposits you've added to this goal. It's independent from your expense transactions.</div>
+                        <div class="alert suggestion">Progress bar fills as your deposits approach the target amount.</div>
+                    </div>
+                </article>
+            </section>
+
+            <section class="card" style="margin-top: 20px;">
+                <div class="panel-header">
+                    <h3>Your goals</h3>
+                </div>
+                <div id="goalsContainer" class="grid"></div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Edit Goal Modal -->
+    <div id="editGoalModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Edit Saving Goal</div>
+            <div class="modal-body">
+                <div class="field">
+                    <label for="editGoalName">Goal name</label>
+                    <input id="editGoalName" type="text">
+                </div>
+                <div class="field">
+                    <label for="editTargetAmount">Target amount (₹)</label>
+                    <input id="editTargetAmount" type="number" min="1" step="1">
+                </div>
+                <div class="field">
+                    <label for="editMonthlySaving">Monthly saving amount (₹)</label>
+                    <input id="editMonthlySaving" type="number" min="0" step="1">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeEditGoalModal()">Cancel</button>
+                <button class="btn-save" onclick="saveEditGoal()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Smart Plan Modal -->
+    <div id="smartPlanModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header" id="smartPlanTitle">Smart Saving Plan</div>
+            <div class="modal-body">
+                <div id="smartPlanContent"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeSmartPlanModal()">Close</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
